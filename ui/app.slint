@@ -1,103 +1,845 @@
 import { Button, CheckBox, LineEdit, SpinBox } from "std-widgets.slint";
+export struct EntryView {
+    id: string,
+    label: string,
+    updated: string,
+}
 
-export component AppWindow inherits Window {
-    title: "Password Maker";
-    preferred-width: 960px;
-    preferred-height: 640px;
-    min-width: 760px;
-    min-height: 520px;
+component SetupView inherits Rectangle {
+    in property <string> status;
+    in property <bool> busy;
+    callback create-vault(password: string, confirmation: string);
     background: #f7f8fa;
-
-    accessible-role: main;
-    accessible-label: "Password Maker";
-
+    accessible-role: form;
+    accessible-label: "Create encrypted vault";
     VerticalLayout {
-        padding: 32px;
-        spacing: 20px;
-
+        alignment: center;
+        padding: 48px;
+        spacing: 18px;
         Text {
-            text: "Password Maker";
-            font-size: 28px;
+            text: "Create your vault";
+            font-size: 32px;
             font-weight: 700;
             color: #1c2430;
+            horizontal-alignment: center;
         }
-
         Text {
-            text: "A secure, local password generator and vault.";
-            font-size: 16px;
+            text: "Your hyper password protects the vault and cannot be recovered.";
             color: #526071;
+            horizontal-alignment: center;
         }
+        password_field := LineEdit {
+            input-type: password;
+            placeholder-text: "Hyper password (12+ characters)";
+            accessible-label: "Hyper password";
+            enabled: !root.busy;
+        }
+        confirmation_field := LineEdit {
+            input-type: password;
+            placeholder-text: "Confirm hyper password";
+            accessible-label: "Confirm hyper password";
+            enabled: !root.busy;
+        }
+        Button {
+            text: root.busy ? "Creating..." : "Create vault";
+            enabled: !root.busy;
+            clicked => {
+                root.create-vault(password_field.text, confirmation_field.text);
+            }
+        }
+        Text {
+            text: root.status;
+            color: #b42318;
+            accessible-live-region: polite;
+        }
+    }
+}
 
+component LockedView inherits Rectangle {
+    in property <string> status;
+    in property <bool> busy;
+    callback unlock(password: string);
+    background: #f7f8fa;
+    accessible-role: form;
+    accessible-label: "Unlock vault";
+    VerticalLayout {
+        alignment: center;
+        padding: 48px;
+        spacing: 18px;
+        Text {
+            text: "Vault locked";
+            font-size: 32px;
+            font-weight: 700;
+            color: #1c2430;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: "Unlock to generate passwords and manage saved entries.";
+            color: #526071;
+            horizontal-alignment: center;
+        }
+        password_field := LineEdit {
+            input-type: password;
+            placeholder-text: "Hyper password";
+            accessible-label: "Hyper password";
+            enabled: !root.busy;
+            accepted(text) => {
+                root.unlock(text);
+            }
+        }
+        Button {
+            text: root.busy ? "Unlocking..." : "Unlock";
+            enabled: !root.busy;
+            clicked => {
+                root.unlock(password_field.text);
+            }
+        }
+        Text {
+            text: root.status;
+            color: #b42318;
+            accessible-live-region: polite;
+        }
+    }
+}
+
+component GeneratorPanel inherits Rectangle {
+    in-out property <string> keyword;
+    in-out property <int> password-length: 16;
+    in-out property <bool> include-lowercase: true;
+    in-out property <bool> include-uppercase: true;
+    in-out property <bool> include-numbers: true;
+    in-out property <bool> include-symbols: true;
+    in-out property <string> password-value;
+    in-out property <bool> password-revealed;
+    in property <bool> busy;
+    callback generate;
+    callback copy;
+    background: transparent;
+    accessible-role: form;
+    accessible-label: "Password generator";
+    VerticalLayout {
+        spacing: 16px;
         Rectangle {
             background: #ffffff;
             border-radius: 12px;
             border-width: 1px;
             border-color: #dbe2ea;
-            accessible-role: region;
-            accessible-label: "Generator preview";
-
             VerticalLayout {
                 padding: 24px;
                 spacing: 16px;
-
                 Text {
-                    text: "Generator";
-                    font-size: 20px;
+                    text: "Keyword string";
                     font-weight: 600;
                     color: #1c2430;
                 }
-
                 LineEdit {
-                    placeholder-text: "Keyword string";
+                    text <=> root.keyword;
+                    placeholder-text: "Use a memorable keyword";
                     accessible-label: "Keyword string";
+                    enabled: !root.busy;
                 }
-
                 HorizontalLayout {
                     spacing: 12px;
-
+                    Text {
+                        text: "Length";
+                        vertical-alignment: center;
+                        color: #526071;
+                    }
                     SpinBox {
+                        value <=> root.password-length;
                         minimum: 8;
                         maximum: 128;
-                        value: 16;
                         accessible-label: "Password length";
+                        enabled: !root.busy;
                     }
-
                     CheckBox {
                         text: "Lowercase";
-                        checked: true;
+                        checked <=> root.include-lowercase;
                         accessible-label: "Include lowercase letters";
+                        enabled: !root.busy;
                     }
-
                     CheckBox {
                         text: "Uppercase";
-                        checked: true;
+                        checked <=> root.include-uppercase;
                         accessible-label: "Include uppercase letters";
+                        enabled: !root.busy;
                     }
-
                     CheckBox {
                         text: "Numbers";
-                        checked: true;
+                        checked <=> root.include-numbers;
                         accessible-label: "Include numbers";
+                        enabled: !root.busy;
                     }
-
                     CheckBox {
                         text: "Symbols";
-                        checked: true;
+                        checked <=> root.include-symbols;
                         accessible-label: "Include symbols";
+                        enabled: !root.busy;
                     }
                 }
-
                 Button {
-                    text: "Generate";
+                    text: root.busy ? "Generating..." : "Generate password";
                     accessible-label: "Generate password";
+                    enabled: !root.busy;
+                    clicked => {
+                        root.generate();
+                    }
                 }
             }
         }
+        Rectangle {
+            background: #ffffff;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #dbe2ea;
+            VerticalLayout {
+                padding: 24px;
+                spacing: 14px;
+                Text {
+                    text: "Generated password";
+                    font-weight: 600;
+                    color: #1c2430;
+                }
+                Text {
+                    text: root.password-revealed ? root.password-value : "••••••••••••••••";
+                    font-size: 24px;
+                    color: #1c2430;
+                    accessible-label: "Generated password";
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    Button {
+                        text: root.password-revealed ? "Hide" : "Reveal";
+                        clicked => {
+                            root.password-revealed = !root.password-revealed;
+                        }
+                    }
+                    Button {
+                        text: "Copy";
+                        accessible-label: "Copy generated password";
+                        enabled: !root.password-value.is-empty;
+                        clicked => {
+                            root.copy();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
+component VaultPanel inherits Rectangle {
+    in-out property <[EntryView]> entries;
+    in-out property <string> search;
+    in-out property <string> entry-label;
+    in-out property <string> editor-id;
+    in-out property <string> keyword;
+    in-out property <int> password-length: 16;
+    in-out property <bool> include-lowercase: true;
+    in-out property <bool> include-uppercase: true;
+    in-out property <bool> include-numbers: true;
+    in-out property <bool> include-symbols: true;
+    callback search-changed;
+    callback save-entry;
+    callback copy-entry(id: string);
+    callback edit-entry(id: string);
+    callback delete-entry(id: string);
+    background: transparent;
+    accessible-role: region;
+    accessible-label: "Saved password entries";
+    VerticalLayout {
+        spacing: 16px;
+        Rectangle {
+            background: #ffffff;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #dbe2ea;
+            VerticalLayout {
+                padding: 24px;
+                spacing: 12px;
+                Text {
+                    text: root.editor-id.is-empty ? "Save a keyword" : "Edit keyword";
+                    font-weight: 600;
+                    color: #1c2430;
+                }
+                LineEdit {
+                    text <=> root.entry-label;
+                    placeholder-text: "Label, for example: Email";
+                    accessible-label: "Entry label";
+                }
+                LineEdit {
+                    text <=> root.keyword;
+                    placeholder-text: "Keyword string";
+                    accessible-label: "Entry keyword";
+                }
+                Button {
+                    text: root.editor-id.is-empty ? "Save entry" : "Update entry";
+                    clicked => {
+                        root.save-entry();
+                    }
+                }
+            }
+        }
+        Rectangle {
+            background: #ffffff;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #dbe2ea;
+            VerticalLayout {
+                padding: 24px;
+                spacing: 10px;
+                Text {
+                    text: "Saved entries";
+                    font-weight: 600;
+                    color: #1c2430;
+                }
+                LineEdit {
+                    text <=> root.search;
+                    placeholder-text: "Search labels";
+                    accessible-label: "Search saved entries";
+                    edited(text) => {
+                        root.search-changed();
+                    }
+                }
+                if root.entries.length == 0: Text {
+                    text: "No saved entries yet.";
+                    color: #526071;
+                }
+                for entry in root.entries: Rectangle {
+                    height: 48px;
+                    background: #f7f8fa;
+                    border-radius: 8px;
+                    HorizontalLayout {
+                        padding: 8px;
+                        spacing: 10px;
+                        Text {
+                            text: entry.label;
+                            color: #1c2430;
+                            vertical-alignment: center;
+                        }
+                        Text {
+                            text: entry.updated;
+                            color: #526071;
+                            vertical-alignment: center;
+                        }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                        }
+                        Button {
+                            text: "Edit";
+                            accessible-label: "Edit " + entry.label;
+                            clicked => {
+                                root.edit-entry(entry.id);
+                            }
+                        }
+                        Button {
+                            text: "Copy";
+                            accessible-label: "Copy password for " + entry.label;
+                            clicked => {
+                                root.copy-entry(entry.id);
+                            }
+                        }
+                        Button {
+                            text: "Delete";
+                            accessible-label: "Delete " + entry.label;
+                            clicked => {
+                                root.delete-entry(entry.id);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component SettingsPanel inherits Rectangle {
+    in-out property <string> status;
+    in-out property <bool> busy;
+    in-out property <int> timeout-index;
+    in-out property <int> theme-index;
+    in-out property <string> backup-password;
+    in-out property <string> restore-path;
+    in-out property <string> new-password;
+    in-out property <string> confirm-password;
+    callback save-settings;
+    callback export-vault;
+    callback choose-backup;
+    callback restore-vault;
+    callback change-password(current: string, next: string, confirmation: string);
+    background: transparent;
+    accessible-role: form;
+    accessible-label: "Vault settings";
+    VerticalLayout {
+        spacing: 16px;
+        Rectangle {
+            background: #ffffff;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #dbe2ea;
+            VerticalLayout {
+                padding: 24px;
+                spacing: 12px;
+                Text {
+                    text: "Security settings";
+                    font-weight: 600;
+                    color: #1c2430;
+                }
+                HorizontalLayout {
+                    Text {
+                        text: "Auto-lock option (0=1m, 1=5m, 2=15m, 3=30m, 4=Never)";
+                        vertical-alignment: center;
+                        color: #526071;
+                    }
+                    SpinBox {
+                        value <=> root.timeout-index;
+                        minimum: 0;
+                        maximum: 4;
+                        accessible-label: "Auto-lock option";
+                    }
+                }
+                HorizontalLayout {
+                    Text {
+                        text: "Theme (0=System, 1=Light, 2=Dark)";
+                        vertical-alignment: center;
+                        color: #526071;
+                    }
+                    SpinBox {
+                        value <=> root.theme-index;
+                        minimum: 0;
+                        maximum: 2;
+                        accessible-label: "Theme option";
+                    }
+                }
+                Button {
+                    text: "Save settings";
+                    clicked => {
+                        root.save-settings();
+                    }
+                }
+                Text {
+                    text: "The vault locks when the session pauses or the application exits.";
+                    color: #526071;
+                }
+            }
+        }
+        Rectangle {
+            background: #ffffff;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #dbe2ea;
+            VerticalLayout {
+                padding: 24px;
+                spacing: 12px;
+                Text {
+                    text: "Encrypted backup";
+                    font-weight: 600;
+                    color: #1c2430;
+                }
+                LineEdit {
+                    text <=> root.backup-password;
+                    input-type: password;
+                    placeholder-text: "Backup password";
+                    accessible-label: "Backup password";
+                }
+                LineEdit {
+                    text <=> root.restore-path;
+                    placeholder-text: "Choose a backup file";
+                    accessible-label: "Backup file";
+                    read-only: true;
+                }
+                HorizontalLayout {
+                    Button {
+                        text: "Export backup";
+                        enabled: !root.busy;
+                        clicked => {
+                            root.export-vault();
+                        }
+                    }
+                    Button {
+                        text: "Choose backup";
+                        enabled: !root.busy;
+                        clicked => {
+                            root.choose-backup();
+                        }
+                    }
+                    Button {
+                        text: "Restore";
+                        enabled: !root.busy && !root.restore-path.is-empty;
+                        clicked => {
+                            root.restore-vault();
+                        }
+                    }
+                }
+            }
+        }
+        Rectangle {
+            background: #ffffff;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #dbe2ea;
+            VerticalLayout {
+                padding: 24px;
+                spacing: 12px;
+                Text {
+                    text: "Change hyper password";
+                    font-weight: 600;
+                    color: #1c2430;
+                }
+                current_field := LineEdit {
+                    input-type: password;
+                    placeholder-text: "Current password";
+                    accessible-label: "Current hyper password";
+                }
+                LineEdit {
+                    text <=> root.new-password;
+                    input-type: password;
+                    placeholder-text: "New password";
+                    accessible-label: "New hyper password";
+                }
+                LineEdit {
+                    text <=> root.confirm-password;
+                    input-type: password;
+                    placeholder-text: "Confirm new password";
+                    accessible-label: "Confirm new hyper password";
+                }
+                Button {
+                    text: "Change password";
+                    enabled: !root.busy;
+                    clicked => {
+                        root.change-password(current-field.text, root.new-password, root.confirm-password);
+                    }
+                }
+            }
+        }
+    }
+}
+
+component NavigationRail inherits Rectangle {
+    callback navigate(destination: string);
+    callback lock;
+    width: 190px;
+    background: #eef1f5;
+    accessible-role: navigation;
+    accessible-label: "Primary navigation";
+    VerticalLayout {
+        padding: 24px;
+        spacing: 10px;
         Text {
-            text: "Create a vault to save keywords and use the manager.";
+            text: "PM";
+            font-size: 24px;
+            font-weight: 700;
+            color: #4f46e5;
+        }
+        Text {
+            text: "Password Maker";
             color: #526071;
-            accessible-live-region: polite;
+        }
+        Rectangle {
+            height: 20px;
+        }
+        Button {
+            text: "Generate";
+            clicked => {
+                root.navigate("generator");
+            }
+        }
+        Button {
+            text: "Vault";
+            clicked => {
+                root.navigate("vault");
+            }
+        }
+        Button {
+            text: "Settings";
+            clicked => {
+                root.navigate("settings");
+            }
+        }
+        Rectangle {
+            vertical-stretch: 1;
+        }
+        Button {
+            text: "Lock";
+            accessible-label: "Lock vault";
+            clicked => {
+                root.lock();
+            }
+        }
+    }
+}
+
+component MainShell inherits Rectangle {
+    in-out property <string> page;
+    in-out property <string> status;
+    in-out property <bool> busy;
+    in-out property <string> keyword;
+    in-out property <int> password-length;
+    in-out property <bool> include-lowercase;
+    in-out property <bool> include-uppercase;
+    in-out property <bool> include-numbers;
+    in-out property <bool> include-symbols;
+    in-out property <string> password-value;
+    in-out property <bool> password-revealed;
+    in-out property <[EntryView]> entries;
+    in-out property <string> search;
+    in-out property <string> entry-label;
+    in-out property <string> editor-id;
+    in-out property <int> timeout-index;
+    in-out property <int> theme-index;
+    in-out property <string> backup-password;
+    in-out property <string> restore-path;
+    in-out property <string> new-password;
+    in-out property <string> confirm-password;
+    callback navigate(destination: string);
+    callback lock;
+    callback generate;
+    callback copy;
+    callback copy-entry(id: string);
+    callback edit-entry(id: string);
+    callback delete-entry(id: string);
+    callback search-changed;
+    callback save-entry;
+    callback save-settings;
+    callback export-vault;
+    callback choose-backup;
+    callback restore-vault;
+    callback change-password(current: string, next: string, confirmation: string);
+    HorizontalLayout {
+        NavigationRail {
+            navigate(destination) => {
+                root.navigate(destination);
+            }
+            lock => {
+                root.lock();
+            }
+        }
+        Rectangle {
+            background: #f7f8fa;
+            VerticalLayout {
+                padding: 36px;
+                spacing: 20px;
+                HorizontalLayout {
+                    Text {
+                        text: root.page == "generator" ? "Generate" : root.page == "vault" ? "Vault" : "Settings";
+                        font-size: 30px;
+                        font-weight: 700;
+                        color: #1c2430;
+                    }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                    }
+                    Button {
+                        text: "Lock";
+                        accessible-label: "Lock vault";
+                        clicked => {
+                            root.lock();
+                        }
+                    }
+                }
+                if root.page == "generator": GeneratorPanel {
+                    keyword <=> root.keyword;
+                    password-length <=> root.password-length;
+                    include-lowercase <=> root.include-lowercase;
+                    include-uppercase <=> root.include-uppercase;
+                    include-numbers <=> root.include-numbers;
+                    include-symbols <=> root.include-symbols;
+                    password-value <=> root.password-value;
+                    password-revealed <=> root.password-revealed;
+                    busy <=> root.busy;
+                    generate => {
+                        root.generate();
+                    }
+                    copy => {
+                        root.copy();
+                    }
+                }
+                if root.page == "vault": VaultPanel {
+                    entries <=> root.entries;
+                    search <=> root.search;
+                    entry-label <=> root.entry-label;
+                    editor-id <=> root.editor-id;
+                    keyword <=> root.keyword;
+                    password-length <=> root.password-length;
+                    include-lowercase <=> root.include-lowercase;
+                    include-uppercase <=> root.include-uppercase;
+                    include-numbers <=> root.include-numbers;
+                    include-symbols <=> root.include-symbols;
+                    search-changed => {
+                        root.search-changed();
+                    }
+                    save-entry => {
+                        root.save-entry();
+                    }
+                    copy-entry(id) => {
+                        root.copy-entry(id);
+                    }
+                    edit-entry(id) => {
+                        root.edit-entry(id);
+                    }
+                    delete-entry(id) => {
+                        root.delete-entry(id);
+                    }
+                }
+                if root.page == "settings": SettingsPanel {
+                    status <=> root.status;
+                    busy <=> root.busy;
+                    timeout-index <=> root.timeout-index;
+                    theme-index <=> root.theme-index;
+                    backup-password <=> root.backup-password;
+                    restore-path <=> root.restore-path;
+                    new-password <=> root.new-password;
+                    confirm-password <=> root.confirm-password;
+                    save-settings => {
+                        root.save-settings();
+                    }
+                    export-vault => {
+                        root.export-vault();
+                    }
+                    choose-backup => {
+                        root.choose-backup();
+                    }
+                    restore-vault => {
+                        root.restore-vault();
+                    }
+                    change-password(current,next,confirmation) => {
+                        root.change-password(current,next,confirmation);
+                    }
+                }
+                Text {
+                    text: root.status;
+                    color: #526071;
+                    accessible-live-region: polite;
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "Password Maker";
+    preferred-width: 1100px;
+    preferred-height: 720px;
+    min-width: 840px;
+    min-height: 600px;
+    background: #f7f8fa;
+    in-out property <string> page: "locked";
+    in-out property <string> status;
+    in-out property <bool> busy;
+    in-out property <string> keyword;
+    in-out property <int> password-length: 16;
+    in-out property <bool> include-lowercase: true;
+    in-out property <bool> include-uppercase: true;
+    in-out property <bool> include-numbers: true;
+    in-out property <bool> include-symbols: true;
+    in-out property <string> password-value;
+    in-out property <bool> password-revealed;
+    in-out property <[EntryView]> entries;
+    in-out property <string> search;
+    in-out property <string> entry-label;
+    in-out property <string> editor-id;
+    in-out property <int> timeout-index: 2;
+    in-out property <int> theme-index;
+    in-out property <string> backup-password;
+    in-out property <string> restore-path;
+    in-out property <string> new-password;
+    in-out property <string> confirm-password;
+    callback create_vault(password: string, confirmation: string);
+    callback unlock_vault(password: string);
+    callback generate_password;
+    callback copy_password;
+    callback copy_entry(id: string);
+    callback edit_entry(id: string);
+    callback lock_vault;
+    callback activity;
+    callback search_changed;
+    callback save_entry;
+    callback delete_entry(id: string);
+    callback export_vault;
+    callback choose_backup;
+    callback restore_vault;
+    callback change_password(current: string, next: string, confirmation: string);
+    callback save_settings;
+    accessible-role: main;
+    accessible-label: "Password Maker";
+    if root.page == "setup": SetupView {
+        status <=> root.status;
+        busy <=> root.busy;
+        create-vault(password,confirmation) => {
+            root.create_vault(password,confirmation);
+        }
+    }
+    if root.page == "locked": LockedView {
+        status <=> root.status;
+        busy <=> root.busy;
+        unlock(password) => {
+            root.unlock_vault(password);
+        }
+    }
+    if root.page != "setup" && root.page != "locked": MainShell {
+        page <=> root.page;
+        status <=> root.status;
+        busy <=> root.busy;
+        keyword <=> root.keyword;
+        password-length <=> root.password-length;
+        include-lowercase <=> root.include-lowercase;
+        include-uppercase <=> root.include-uppercase;
+        include-numbers <=> root.include-numbers;
+        include-symbols <=> root.include-symbols;
+        password-value <=> root.password-value;
+        password-revealed <=> root.password-revealed;
+        entries <=> root.entries;
+        search <=> root.search;
+        entry-label <=> root.entry-label;
+        editor-id <=> root.editor-id;
+        timeout-index <=> root.timeout-index;
+        theme-index <=> root.theme-index;
+        backup-password <=> root.backup-password;
+        restore-path <=> root.restore-path;
+        new-password <=> root.new-password;
+        confirm-password <=> root.confirm-password;
+        navigate(destination) => {
+            root.page = destination;
+            root.activity();
+        }
+        lock => {
+            root.lock_vault();
+        }
+        generate => {
+            root.generate_password();
+        }
+        copy => {
+            root.copy_password();
+        }
+        copy-entry(id) => {
+            root.copy_entry(id);
+        }
+        edit-entry(id) => {
+            root.edit_entry(id);
+        }
+        delete-entry(id) => {
+            root.delete_entry(id);
+        }
+        search-changed => {
+            root.search_changed();
+        }
+        save-entry => {
+            root.save_entry();
+        }
+        save-settings => {
+            root.save_settings();
+        }
+        export-vault => {
+            root.export_vault();
+        }
+        choose-backup => {
+            root.choose_backup();
+        }
+        restore-vault => {
+            root.restore_vault();
+        }
+        change-password(current,next,confirmation) => {
+            root.change_password(current,next,confirmation);
         }
     }
 }
