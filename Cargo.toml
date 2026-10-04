@@ -31,5 +31,5 @@ slint-build = "=1.18.1"
 
 [dev-dependencies]
 proptest = "1.11"
-i-slint-backend-testing = "=1.18.1"
+i-slint-backend-testing = { version = "=1.18.1", features = ["renderer-software"] }
 image = { version = "0.25", default-features = false, features = ["png"] }

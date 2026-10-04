@@ -1,4 +1,4 @@
-import { Button, CheckBox, LineEdit, ScrollView, SpinBox } from "std-widgets.slint";
+import { Button, CheckBox, ComboBox, LineEdit, ScrollView, SpinBox } from "std-widgets.slint";
 export struct EntryView {
     id: string,
     label: string,
@@ -312,45 +312,51 @@ component VaultPanel inherits Rectangle {
                     color: #526071;
                 }
                 for entry in root.entries: Rectangle {
-                    height: 48px;
+                    height: 78px;
                     background: #f7f8fa;
                     border-radius: 8px;
-                    HorizontalLayout {
+                    VerticalLayout {
                         padding: 8px;
-                        spacing: 10px;
-                        Text {
-                            text: entry.label;
-                            color: #1c2430;
-                            vertical-alignment: center;
-                            horizontal-stretch: 1;
-                        }
-                        Text {
-                            text: entry.updated;
-                            color: #526071;
-                            vertical-alignment: center;
-                        }
-                        Rectangle {
-                            horizontal-stretch: 1;
-                        }
-                        Button {
-                            text: "Edit";
-                            accessible-label: "Edit " + entry.label;
-                            clicked => {
-                                root.edit-entry(entry.id);
+                        spacing: 6px;
+                        HorizontalLayout {
+                            spacing: 10px;
+                            Text {
+                                text: entry.label;
+                                color: #1c2430;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            Text {
+                                text: entry.updated;
+                                color: #526071;
+                                vertical-alignment: center;
                             }
                         }
-                        Button {
-                            text: "Copy";
-                            accessible-label: "Copy password for " + entry.label;
-                            clicked => {
-                                root.copy-entry(entry.id);
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Rectangle {
+                                horizontal-stretch: 1;
                             }
-                        }
-                        Button {
-                            text: "Delete";
-                            accessible-label: "Delete " + entry.label;
-                            clicked => {
-                                root.delete-entry(entry.id);
+                            Button {
+                                text: "Edit";
+                                accessible-label: "Edit " + entry.label;
+                                clicked => {
+                                    root.edit-entry(entry.id);
+                                }
+                            }
+                            Button {
+                                text: "Copy";
+                                accessible-label: "Copy password for " + entry.label;
+                                clicked => {
+                                    root.copy-entry(entry.id);
+                                }
+                            }
+                            Button {
+                                text: "Delete";
+                                accessible-label: "Delete " + entry.label;
+                                clicked => {
+                                    root.delete-entry(entry.id);
+                                }
                             }
                         }
                     }
@@ -401,15 +407,9 @@ component SettingsPanel inherits Rectangle {
                         color: #526071;
                         horizontal-stretch: 1;
                     }
-                    Text {
-                        text: root.timeout-index == 0 ? "1 minute" : root.timeout-index == 1 ? "5 minutes" : root.timeout-index == 3 ? "30 minutes" : root.timeout-index == 4 ? "Never" : "15 minutes";
-                        vertical-alignment: center;
-                        color: #526071;
-                    }
-                    SpinBox {
-                        value <=> root.timeout-index;
-                        minimum: 0;
-                        maximum: 4;
+                    ComboBox {
+                        model: ["1 minute", "5 minutes", "15 minutes", "30 minutes", "Never"];
+                        current-index <=> root.timeout-index;
                         accessible-label: "Auto-lock timeout selection";
                         enabled: !root.busy;
                     }
@@ -422,15 +422,9 @@ component SettingsPanel inherits Rectangle {
                         color: #526071;
                         horizontal-stretch: 1;
                     }
-                    Text {
-                        text: root.theme-index == 1 ? "Light" : root.theme-index == 2 ? "Dark" : "System";
-                        vertical-alignment: center;
-                        color: #526071;
-                    }
-                    SpinBox {
-                        value <=> root.theme-index;
-                        minimum: 0;
-                        maximum: 2;
+                    ComboBox {
+                        model: ["System", "Light", "Dark"];
+                        current-index <=> root.theme-index;
                         accessible-label: "Theme selection";
                         enabled: !root.busy;
                     }

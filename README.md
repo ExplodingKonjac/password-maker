@@ -26,6 +26,12 @@ cargo fmt --check
 cargo clippy --all-targets --all-features -- -D warnings
 ```
 
+To render a headless UI review set for normal and minimum window sizes:
+
+```text
+cargo run --example ui_preview -- /tmp/password-maker-ui
+```
+
 The first launch asks for a hyper password. After unlocking, use **Generate**
 for deterministic passwords, **Vault** to save keyword entries, and **Settings**
 for auto-lock, encrypted backups, and password rotation.
