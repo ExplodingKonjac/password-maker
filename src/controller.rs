@@ -336,6 +336,7 @@ impl Controller {
                     window.set_backup_password("".into());
                     window.set_new_password("".into());
                     window.set_confirm_password("".into());
+                    window.set_current_password("".into());
                     window.set_editor_id("".into());
                     window.set_entry_label("".into());
                     self.refresh_entries();

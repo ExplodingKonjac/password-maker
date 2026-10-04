@@ -362,6 +362,7 @@ component SettingsPanel inherits Rectangle {
     in-out property <string> restore-path;
     in-out property <string> new-password;
     in-out property <string> confirm-password;
+    in-out property <string> current-password;
     callback save-settings;
     callback export-vault;
     callback choose-backup;
@@ -486,7 +487,8 @@ component SettingsPanel inherits Rectangle {
                     font-weight: 600;
                     color: #1c2430;
                 }
-                current_field := LineEdit {
+                LineEdit {
+                    text <=> root.current-password;
                     input-type: password;
                     placeholder-text: "Current password";
                     accessible-label: "Current hyper password";
@@ -506,9 +508,7 @@ component SettingsPanel inherits Rectangle {
                 Button {
                     text: "Change password";
                     enabled: !root.busy;
-                    clicked => {
-                        root.change-password(current-field.text, root.new-password, root.confirm-password);
-                    }
+                    clicked => { root.change-password(root.current-password, root.new-password, root.confirm-password); }
                 }
             }
         }
@@ -591,6 +591,7 @@ component MainShell inherits Rectangle {
     in-out property <string> restore-path;
     in-out property <string> new-password;
     in-out property <string> confirm-password;
+    in-out property <string> current-password;
     callback navigate(destination: string);
     callback lock;
     callback generate;
@@ -690,6 +691,7 @@ component MainShell inherits Rectangle {
                     restore-path <=> root.restore-path;
                     new-password <=> root.new-password;
                     confirm-password <=> root.confirm-password;
+                    current-password <=> root.current-password;
                     save-settings => {
                         root.save-settings();
                     }
@@ -744,6 +746,7 @@ export component AppWindow inherits Window {
     in-out property <string> restore-path;
     in-out property <string> new-password;
     in-out property <string> confirm-password;
+    in-out property <string> current-password;
     callback create_vault(password: string, confirmation: string);
     callback unlock_vault(password: string);
     callback generate_password;
@@ -798,6 +801,7 @@ export component AppWindow inherits Window {
         restore-path <=> root.restore-path;
         new-password <=> root.new-password;
         confirm-password <=> root.confirm-password;
+        current-password <=> root.current-password;
         navigate(destination) => {
             root.page = destination;
             root.activity();
