@@ -33,14 +33,17 @@ pub enum ServiceError {
     #[error("Choose a backup file separate from the active vault.")]
     ActiveVaultDestination,
 }
+
 struct Session {
     password: Zeroizing<String>,
     payload: VaultPayload,
 }
+
 pub struct VaultService {
     store: VaultStore,
     session: Option<Session>,
 }
+
 impl VaultService {
     pub fn new(store: VaultStore) -> Self {
         Self {
@@ -48,11 +51,13 @@ impl VaultService {
             session: None,
         }
     }
+
     pub fn create(&mut self, password: Zeroizing<String>) -> Result<(), ServiceError> {
         let payload = self.store.create(&password)?;
         self.session = Some(Session { password, payload });
         Ok(())
     }
+
     pub fn unlock(&mut self, password: Zeroizing<String>) -> Result<(), ServiceError> {
         let payload = self
             .store
@@ -62,18 +67,23 @@ impl VaultService {
         self.session = Some(Session { password, payload });
         Ok(())
     }
+
     pub fn lock(&mut self) {
         self.session = None;
     }
+
     fn session(&self) -> Result<&Session, ServiceError> {
         self.session.as_ref().ok_or(ServiceError::Locked)
     }
+
     pub fn entries(&self) -> Result<Vec<VaultEntry>, ServiceError> {
         Ok(self.session()?.payload.entries.clone())
     }
+
     pub fn settings(&self) -> Result<VaultSettings, ServiceError> {
         Ok(self.session()?.payload.settings.clone())
     }
+
     pub fn entry(&self, id: Uuid) -> Result<VaultEntry, ServiceError> {
         self.session()?
             .payload
@@ -83,6 +93,7 @@ impl VaultService {
             .cloned()
             .ok_or(ServiceError::NotFound)
     }
+
     pub fn generate(
         &self,
         keyword: &str,
@@ -94,6 +105,7 @@ impl VaultService {
             options,
         )?))
     }
+
     pub fn save_entry(
         &mut self,
         id: Option<Uuid>,
@@ -129,23 +141,27 @@ impl VaultService {
         }
         self.commit(candidate)
     }
+
     pub fn delete_entry(&mut self, id: Uuid) -> Result<(), ServiceError> {
         self.entry(id)?;
         let mut candidate = self.session()?.payload.clone();
         candidate.entries.retain(|e| e.id != id);
         self.commit(candidate)
     }
+
     pub fn update_settings(&mut self, settings: VaultSettings) -> Result<(), ServiceError> {
         validate_timeout(settings.auto_lock_minutes)?;
         let mut candidate = self.session()?.payload.clone();
         candidate.settings = settings;
         self.commit(candidate)
     }
+
     fn commit(&mut self, candidate: VaultPayload) -> Result<(), ServiceError> {
         self.store.save(&self.session()?.password, &candidate)?;
         self.session.as_mut().ok_or(ServiceError::Locked)?.payload = candidate;
         Ok(())
     }
+
     pub fn change_password(
         &mut self,
         current: &str,
@@ -159,6 +175,7 @@ impl VaultService {
         self.session.as_mut().ok_or(ServiceError::Locked)?.password = next;
         Ok(())
     }
+
     pub fn export(&self, destination: &Path) -> Result<(), ServiceError> {
         if same_path(destination, self.store.path()) {
             return Err(ServiceError::ActiveVaultDestination);
@@ -168,6 +185,7 @@ impl VaultService {
             .export(&session.password, &session.payload, destination)?;
         Ok(())
     }
+
     pub fn restore(
         &mut self,
         source: &Path,
@@ -204,6 +222,7 @@ impl VaultService {
         Ok(previous)
     }
 }
+
 fn same_path(a: &Path, b: &Path) -> bool {
     a == b
         || a.canonicalize()
@@ -211,12 +230,14 @@ fn same_path(a: &Path, b: &Path) -> bool {
             .zip(b.canonicalize().ok())
             .is_some_and(|(a, b)| a == b)
 }
+
 fn validate_timeout(timeout: Option<u32>) -> Result<(), ServiceError> {
     if timeout.is_some_and(|t| ![1, 5, 15, 30].contains(&t)) {
         return Err(ServiceError::InvalidTimeout);
     }
     Ok(())
 }
+
 pub fn validate_payload(payload: &VaultPayload) -> Result<(), ServiceError> {
     if payload.schema_version != 1 {
         return Err(VaultCryptoError::UnsupportedSchema.into());
@@ -237,12 +258,14 @@ pub fn validate_payload(payload: &VaultPayload) -> Result<(), ServiceError> {
     }
     Ok(())
 }
+
 /// Timeouts are based on application input, with a wall-clock heartbeat fallback after a pause.
 pub struct LockPolicy {
     last_activity: Instant,
     last_heartbeat: std::time::SystemTime,
     timeout: Option<u32>,
 }
+
 impl LockPolicy {
     pub fn new(timeout: Option<u32>) -> Self {
         Self {
@@ -251,13 +274,16 @@ impl LockPolicy {
             timeout,
         }
     }
+
     pub fn activity(&mut self) {
         self.last_activity = Instant::now();
     }
+
     pub fn set_timeout(&mut self, timeout: Option<u32>) {
         self.timeout = timeout;
         self.activity();
     }
+
     pub fn tick(&mut self) -> bool {
         let now = std::time::SystemTime::now();
         let pause = now
@@ -270,10 +296,12 @@ impl LockPolicy {
             })
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
     const PASSWORD: &str = "correct horse battery staple";
+
     #[test]
     fn lifecycle_rotation_backup_and_edit_preserve_generation() {
         let dir = tempfile::tempdir().unwrap();
@@ -335,6 +363,7 @@ mod tests {
                 .is_empty()
         );
     }
+
     #[test]
     fn failed_save_does_not_change_memory() {
         let dir = tempfile::tempdir().unwrap();
@@ -355,6 +384,7 @@ mod tests {
         );
         assert!(service.entries().unwrap().is_empty());
     }
+
     #[test]
     fn timeout_and_resume_override_never() {
         let mut policy = LockPolicy::new(Some(1));
@@ -365,6 +395,7 @@ mod tests {
         policy.last_heartbeat = std::time::SystemTime::now() - Duration::from_secs(10);
         assert!(policy.tick());
     }
+
     #[test]
     fn settings_are_validated() {
         assert!(validate_timeout(Some(2)).is_err());

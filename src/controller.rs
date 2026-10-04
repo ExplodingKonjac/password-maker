@@ -140,6 +140,7 @@ struct ClipboardState {
     expected: Option<Secret>,
     deadline: Option<Instant>,
 }
+
 impl ClipboardState {
     fn new() -> Self {
         Self {
@@ -148,6 +149,7 @@ impl ClipboardState {
             deadline: None,
         }
     }
+
     fn copy(&mut self, value: Secret) -> Result<(), String> {
         if self.context.is_none() {
             self.context = Some(Clipboard::new().map_err(|_| "Could not access the clipboard.")?);
@@ -161,6 +163,7 @@ impl ClipboardState {
         self.deadline = Some(Instant::now() + Duration::from_secs(30));
         Ok(())
     }
+
     fn clear(&mut self) {
         if let (Some(clipboard), Some(expected)) = (&mut self.context, &self.expected)
             && clipboard.get_text().ok().as_deref() == Some(expected.as_str())
@@ -170,12 +173,14 @@ impl ClipboardState {
         self.expected = None;
         self.deadline = None;
     }
+
     fn tick(&mut self) {
         if self.deadline.is_some_and(|t| Instant::now() >= t) {
             self.clear();
         }
     }
 }
+
 struct UiState {
     entries: Vec<EntryMetadata>,
     settings: VaultSettings,
@@ -183,6 +188,7 @@ struct UiState {
     clipboard: ClipboardState,
     unlocked: bool,
 }
+
 pub struct Controller {
     window: slint::Weak<AppWindow>,
     sender: mpsc::Sender<Request>,
@@ -194,6 +200,7 @@ pub struct Controller {
     timer: Timer,
     worker: RefCell<Option<JoinHandle<()>>>,
 }
+
 impl Controller {
     pub fn new(window: &AppWindow) -> Result<Rc<Self>, Box<dyn std::error::Error>> {
         let store = VaultStore::default_location()?;
@@ -264,6 +271,7 @@ impl Controller {
             });
         Ok(controller)
     }
+
     fn submit(&self, job: Job) {
         let Some(window) = self.window.upgrade() else {
             return;
@@ -286,6 +294,7 @@ impl Controller {
             window.set_status("The vault worker stopped. Restart the application.".into());
         }
     }
+
     fn tick(&self) {
         let Some(window) = self.window.upgrade() else {
             return;
@@ -368,6 +377,7 @@ impl Controller {
             }
         }
     }
+
     fn refresh_entries(&self) {
         if let Some(window) = self.window.upgrade() {
             let query = window.get_search().to_lowercase();
@@ -389,6 +399,7 @@ impl Controller {
             window.set_entries(ModelRc::new(VecModel::from(entries)));
         }
     }
+
     fn copy(&self, password: Secret) {
         if let Some(window) = self.window.upgrade() {
             let result = self.state.borrow_mut().clipboard.copy(password);
@@ -400,6 +411,7 @@ impl Controller {
             );
         }
     }
+
     pub fn lock(&self) {
         self.epoch.fetch_add(1, Ordering::SeqCst);
         {
@@ -429,6 +441,7 @@ impl Controller {
             job: Job::Lock,
         });
     }
+
     pub fn shutdown(&self) {
         self.timer.stop();
         self.power_stop.store(true, Ordering::SeqCst);
@@ -441,6 +454,7 @@ impl Controller {
             let _ = worker.join();
         }
     }
+
     fn wire(self: &Rc<Self>, window: &AppWindow) {
         let c = Rc::downgrade(self);
         window.on_create_vault(move |password, confirm| {
@@ -668,6 +682,7 @@ impl Controller {
         });
     }
 }
+
 fn options(window: &AppWindow) -> PasswordOptions {
     PasswordOptions {
         length: window.get_password_length() as u16,
@@ -678,6 +693,7 @@ fn options(window: &AppWindow) -> PasswordOptions {
         ..PasswordOptions::default()
     }
 }
+
 #[cfg(test)]
 mod tests {
     #[test]

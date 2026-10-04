@@ -2,6 +2,7 @@
 mod controller;
 mod power;
 slint::include_modules!();
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     slint::BackendSelector::new()
         .backend_name("winit".into())

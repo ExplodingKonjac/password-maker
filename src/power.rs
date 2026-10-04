@@ -2,6 +2,7 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
+
 /// The UI additionally locks on wall-clock heartbeat gaps, including process suspension.
 pub fn install(signal: Arc<AtomicBool>, stop: Arc<AtomicBool>) {
     std::thread::spawn(move || {
