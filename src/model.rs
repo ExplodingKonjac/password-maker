@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 pub const MIN_PASSWORD_LENGTH: u16 = 8;
 pub const MAX_PASSWORD_LENGTH: u16 = 128;
@@ -69,18 +70,23 @@ impl PasswordOptions {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultEntry {
+    #[zeroize(skip)]
     pub id: Uuid,
     pub label: String,
     pub keyword: String,
+    #[zeroize(skip)]
     pub options: PasswordOptions,
+    #[zeroize(skip)]
     pub created_at: i64,
+    #[zeroize(skip)]
     pub updated_at: i64,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultSettings {
+    #[zeroize(skip)]
     pub auto_lock_minutes: Option<u32>,
 }
 
@@ -92,11 +98,13 @@ impl Default for VaultSettings {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultPayload {
+    #[zeroize(skip)]
     pub schema_version: u16,
     pub generation_key: [u8; 32],
     pub entries: Vec<VaultEntry>,
+    #[zeroize(skip)]
     pub settings: VaultSettings,
 }
 
