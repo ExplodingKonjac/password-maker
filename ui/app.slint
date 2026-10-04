@@ -777,18 +777,16 @@ component MainShell inherits Rectangle {
                     }
                 }
                 Rectangle {
-                    height: 34px;
-                    background: #eef1f5;
-                    border-radius: 6px;
-                    border-width: 1px;
-                    border-color: #dbe2ea;
-                    opacity: root.status.is-empty ? 0.45 : 1;
+                    height: 30px;
+                    background: transparent;
+                    opacity: root.status.is-empty ? 0 : 1;
                     animate opacity { duration: 180ms; easing: ease-out; }
                     HorizontalLayout {
-                        padding: 8px;
+                        padding: 4px;
                         Text {
-                            text: root.status.is-empty ? "Ready" : root.status;
+                            text: root.status;
                             color: #526071;
+                            font-size: 12px;
                             accessible-live-region: polite;
                         }
                     }
