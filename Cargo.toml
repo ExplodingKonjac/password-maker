@@ -1,0 +1,25 @@
+[package]
+name = "password-maker"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+arboard = "3.6"
+argon2 = "0.5"
+blake3 = "1.8"
+chacha20poly1305 = "0.10"
+directories = "6.0"
+getrandom = "0.3"
+postcard = { version = "1.1", features = ["alloc", "use-std"] }
+rand_chacha = "0.10"
+rand_core = "0.10"
+rfd = "0.17"
+serde = { version = "1.0", features = ["derive"] }
+slint = { version = "1.17", features = ["accessibility"] }
+thiserror = "2.0"
+unicode-normalization = "0.1"
+uuid = { version = "1.18", features = ["serde", "v4"] }
+zeroize = { version = "1.8", features = ["derive"] }
+
+[build-dependencies]
+slint-build = "1.17"

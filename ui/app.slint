@@ -1,0 +1,103 @@
+import { Button, CheckBox, LineEdit, SpinBox } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: "Password Maker";
+    preferred-width: 960px;
+    preferred-height: 640px;
+    min-width: 760px;
+    min-height: 520px;
+    background: #f7f8fa;
+
+    accessible-role: main;
+    accessible-label: "Password Maker";
+
+    VerticalLayout {
+        padding: 32px;
+        spacing: 20px;
+
+        Text {
+            text: "Password Maker";
+            font-size: 28px;
+            font-weight: 700;
+            color: #1c2430;
+        }
+
+        Text {
+            text: "A secure, local password generator and vault.";
+            font-size: 16px;
+            color: #526071;
+        }
+
+        Rectangle {
+            background: #ffffff;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #dbe2ea;
+            accessible-role: region;
+            accessible-label: "Generator preview";
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Generator";
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #1c2430;
+                }
+
+                LineEdit {
+                    placeholder-text: "Keyword string";
+                    accessible-label: "Keyword string";
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    SpinBox {
+                        minimum: 8;
+                        maximum: 128;
+                        value: 16;
+                        accessible-label: "Password length";
+                    }
+
+                    CheckBox {
+                        text: "Lowercase";
+                        checked: true;
+                        accessible-label: "Include lowercase letters";
+                    }
+
+                    CheckBox {
+                        text: "Uppercase";
+                        checked: true;
+                        accessible-label: "Include uppercase letters";
+                    }
+
+                    CheckBox {
+                        text: "Numbers";
+                        checked: true;
+                        accessible-label: "Include numbers";
+                    }
+
+                    CheckBox {
+                        text: "Symbols";
+                        checked: true;
+                        accessible-label: "Include symbols";
+                    }
+                }
+
+                Button {
+                    text: "Generate";
+                    accessible-label: "Generate password";
+                }
+            }
+        }
+
+        Text {
+            text: "Create a vault to save keywords and use the manager.";
+            color: #526071;
+            accessible-live-region: polite;
+        }
+    }
+}
