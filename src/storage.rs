@@ -8,6 +8,7 @@ use directories::ProjectDirs;
 use getrandom::fill as fill_random;
 use tempfile::NamedTempFile;
 use thiserror::Error;
+use zeroize::Zeroizing;
 
 use crate::{
     crypto::{self, VaultCryptoError},
@@ -61,11 +62,18 @@ impl VaultStore {
         if self.exists() {
             return Err(StorageError::AlreadyExists);
         }
-        let mut generation_key = [0u8; 32];
-        fill_random(&mut generation_key).map_err(|_| StorageError::Crypto(VaultCryptoError::Randomness))?;
-        let payload = VaultPayload::new(generation_key);
-        self.save(password, &payload)?;
+        let mut generation_key = Zeroizing::new([0u8; 32]);
+        fill_random(generation_key.as_mut())
+            .map_err(|_| StorageError::Crypto(VaultCryptoError::Randomness))?;
+        let payload = VaultPayload::new(*generation_key);
+        let bytes = crypto::seal(password, &payload)?;
+        write_new(&self.path, &bytes)?;
         Ok(payload)
+    }
+
+    pub fn create_from(&self, password: &str, payload: &VaultPayload) -> Result<(), StorageError> {
+        let bytes = crypto::seal(password, payload)?;
+        write_new(&self.path, &bytes)
     }
 
     pub fn load(&self, password: &str) -> Result<VaultPayload, StorageError> {
@@ -94,6 +102,24 @@ impl VaultStore {
     }
 }
 
+fn write_new(path: &Path, bytes: &[u8]) -> Result<(), StorageError> {
+    let parent = path.parent().ok_or(StorageError::NoDataDirectory)?;
+    fs::create_dir_all(parent)?;
+    let mut temporary = NamedTempFile::new_in(parent)?;
+    temporary.write_all(bytes)?;
+    temporary.as_file().sync_all()?;
+    temporary.persist_noclobber(path).map_err(|error| {
+        if error.error.kind() == std::io::ErrorKind::AlreadyExists {
+            StorageError::AlreadyExists
+        } else {
+            StorageError::Io(error.error)
+        }
+    })?;
+    #[cfg(unix)]
+    File::open(parent)?.sync_all()?;
+    Ok(())
+}
+
 fn read_limited(path: &Path) -> Result<Vec<u8>, StorageError> {
     if !path.is_file() {
         return Err(StorageError::Missing);
@@ -102,9 +128,12 @@ fn read_limited(path: &Path) -> Result<Vec<u8>, StorageError> {
     if metadata.len() > MAX_VAULT_BYTES {
         return Err(StorageError::FileTooLarge);
     }
-    let mut file = File::open(path)?;
+    let file = File::open(path)?;
     let mut bytes = Vec::with_capacity(metadata.len() as usize);
-    file.read_to_end(&mut bytes)?;
+    file.take(MAX_VAULT_BYTES + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_VAULT_BYTES {
+        return Err(StorageError::FileTooLarge);
+    }
     Ok(bytes)
 }
 
@@ -117,15 +146,10 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), StorageError> {
     let mut temporary = NamedTempFile::new_in(parent)?;
     temporary.write_all(bytes)?;
     temporary.as_file().sync_all()?;
-    let temporary_path = temporary.into_temp_path();
-
-    #[cfg(windows)]
-    if path.exists() {
-        fs::remove_file(path)?;
-    }
-
-    fs::rename(&temporary_path, path)?;
-    Ok(temporary_path.keep().map(|_| ()).map_err(|error| error.error)?)
+    temporary.persist(path).map_err(|error| error.error)?;
+    #[cfg(unix)]
+    File::open(parent)?.sync_all()?;
+    Ok(())
 }
 
 #[cfg(test)]

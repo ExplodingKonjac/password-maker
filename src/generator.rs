@@ -1,13 +1,11 @@
-use std::fmt::Write as _;
-
 use rand_chacha::ChaCha20Rng;
 use rand_core::{Rng, SeedableRng};
 use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
+use zeroize::Zeroizing;
 
-use crate::model::{OptionsError, PasswordOptions, MAX_KEYWORD_BYTES};
+use crate::model::{MAX_KEYWORD_BYTES, OptionsError, PasswordOptions};
 
-const ALPHABET_VERSION: u8 = 1;
 const LOWERCASE: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
 const UPPERCASE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const NUMBERS: &[u8] = b"0123456789";
@@ -28,7 +26,10 @@ pub fn generate_password(
     keyword: &str,
     options: PasswordOptions,
 ) -> Result<String, GenerationError> {
-    let normalized_keyword: String = keyword.nfc().collect();
+    if keyword.len() > MAX_KEYWORD_BYTES {
+        return Err(GenerationError::KeywordTooLong);
+    }
+    let normalized_keyword = Zeroizing::new(keyword.nfc().collect::<String>());
     if normalized_keyword.is_empty() {
         return Err(GenerationError::EmptyKeyword);
     }
@@ -37,9 +38,10 @@ pub fn generate_password(
     }
     options.validate()?;
 
-    let mut canonical = Vec::with_capacity(32 + normalized_keyword.len());
+    let mut canonical = Zeroizing::new(Vec::with_capacity(32 + normalized_keyword.len()));
     canonical.extend_from_slice(b"password-maker/generator/v1\0");
-    canonical.push(ALPHABET_VERSION);
+    canonical.push(options.algorithm_version);
+    canonical.push(options.alphabet_version);
     canonical.push(options.flags());
     canonical.extend_from_slice(&options.length.to_be_bytes());
     canonical.extend_from_slice(&(normalized_keyword.len() as u32).to_be_bytes());
@@ -67,7 +69,7 @@ pub fn generate_password(
         combined.extend_from_slice(class);
     }
 
-    let mut password = Vec::with_capacity(options.length as usize);
+    let mut password = Zeroizing::new(Vec::with_capacity(options.length as usize));
     for class in selected_classes {
         password.push(class[bounded_index(&mut rng, class.len())]);
     }
@@ -80,11 +82,7 @@ pub fn generate_password(
         password.swap(index, swap_index);
     }
 
-    let mut output = String::with_capacity(password.len());
-    for byte in password {
-        output.write_char(byte as char).expect("writing to String cannot fail");
-    }
-    Ok(output)
+    Ok(String::from_utf8(password.to_vec()).expect("alphabet is ASCII"))
 }
 
 fn bounded_index(rng: &mut ChaCha20Rng, upper_bound: usize) -> usize {
@@ -111,7 +109,7 @@ mod tests {
         let first = generate_password(&KEY, "example", options).unwrap();
         let second = generate_password(&KEY, "example", options).unwrap();
         assert_eq!(first, second);
-        assert_eq!(first, "$s96:OHOn0z)85do");
+        assert_eq!(first, "7rSFInA0DzYyJ3;}");
         assert_eq!(first.len(), 16);
     }
 
@@ -147,7 +145,9 @@ mod tests {
         };
         assert_eq!(
             generate_password(&KEY, "example", no_classes),
-            Err(GenerationError::InvalidOptions(OptionsError::NoCharacterClasses))
+            Err(GenerationError::InvalidOptions(
+                OptionsError::NoCharacterClasses
+            ))
         );
 
         let too_short = PasswordOptions {
@@ -156,6 +156,7 @@ mod tests {
             uppercase: true,
             numbers: true,
             symbols: false,
+            ..PasswordOptions::default()
         };
         assert!(generate_password(&KEY, "example", too_short).is_ok());
     }

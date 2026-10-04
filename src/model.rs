@@ -10,6 +10,8 @@ pub const MAX_KEYWORD_BYTES: usize = 4096;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum OptionsError {
+    #[error("unsupported generation or alphabet version")]
+    UnsupportedVersion,
     #[error("password length must be between {MIN_PASSWORD_LENGTH} and {MAX_PASSWORD_LENGTH}")]
     LengthOutOfRange,
     #[error("at least one character class must be selected")]
@@ -20,6 +22,8 @@ pub enum OptionsError {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PasswordOptions {
+    pub algorithm_version: u8,
+    pub alphabet_version: u8,
     pub length: u16,
     pub lowercase: bool,
     pub uppercase: bool,
@@ -30,6 +34,8 @@ pub struct PasswordOptions {
 impl Default for PasswordOptions {
     fn default() -> Self {
         Self {
+            algorithm_version: 1,
+            alphabet_version: 1,
             length: DEFAULT_PASSWORD_LENGTH,
             lowercase: true,
             uppercase: true,
@@ -41,6 +47,9 @@ impl Default for PasswordOptions {
 
 impl PasswordOptions {
     pub fn validate(self) -> Result<(), OptionsError> {
+        if self.algorithm_version != 1 || self.alphabet_version != 1 {
+            return Err(OptionsError::UnsupportedVersion);
+        }
         if !(MIN_PASSWORD_LENGTH..=MAX_PASSWORD_LENGTH).contains(&self.length) {
             return Err(OptionsError::LengthOutOfRange);
         }
@@ -63,14 +72,11 @@ impl PasswordOptions {
     }
 
     pub const fn selected_class_count(self) -> u16 {
-        self.lowercase as u16
-            + self.uppercase as u16
-            + self.numbers as u16
-            + self.symbols as u16
+        self.lowercase as u16 + self.uppercase as u16 + self.numbers as u16 + self.symbols as u16
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultEntry {
     #[zeroize(skip)]
     pub id: Uuid,
@@ -88,17 +94,28 @@ pub struct VaultEntry {
 pub struct VaultSettings {
     #[zeroize(skip)]
     pub auto_lock_minutes: Option<u32>,
+    #[zeroize(skip)]
+    pub theme: ThemeChoice,
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+pub enum ThemeChoice {
+    #[default]
+    System,
+    Light,
+    Dark,
 }
 
 impl Default for VaultSettings {
     fn default() -> Self {
         Self {
             auto_lock_minutes: Some(15),
+            theme: ThemeChoice::System,
         }
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize, Zeroize, ZeroizeOnDrop)]
 pub struct VaultPayload {
     #[zeroize(skip)]
     pub schema_version: u16,
@@ -106,6 +123,23 @@ pub struct VaultPayload {
     pub entries: Vec<VaultEntry>,
     #[zeroize(skip)]
     pub settings: VaultSettings,
+}
+
+impl std::fmt::Debug for VaultEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VaultEntry")
+            .field("id", &self.id)
+            .finish_non_exhaustive()
+    }
+}
+
+impl std::fmt::Debug for VaultPayload {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VaultPayload")
+            .field("schema_version", &self.schema_version)
+            .field("entry_count", &self.entries.len())
+            .finish_non_exhaustive()
+    }
 }
 
 impl VaultPayload {

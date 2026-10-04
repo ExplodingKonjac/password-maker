@@ -2,6 +2,9 @@
 name = "password-maker"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.94"
+license = "GPL-3.0-or-later"
+description = "An offline deterministic password generator and encrypted desktop vault"
 
 [dependencies]
 arboard = "3.6"
@@ -15,7 +18,8 @@ rand_chacha = "0.10"
 rand_core = "0.10"
 rfd = "0.17"
 serde = { version = "1.0", features = ["derive"] }
-slint = { version = "1.17", features = ["accessibility"] }
+slint = { version = "=1.18.1", default-features = false, features = ["std", "backend-winit", "renderer-software", "accessibility", "compat-1-2", "unstable-winit-030"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 thiserror = "2.0"
 tempfile = "3.27"
 unicode-normalization = "0.1"
@@ -23,4 +27,9 @@ uuid = { version = "1.18", features = ["serde", "v4"] }
 zeroize = { version = "1.8", features = ["derive"] }
 
 [build-dependencies]
-slint-build = "1.17"
+slint-build = "=1.18.1"
+
+[dev-dependencies]
+proptest = "1.11"
+i-slint-backend-testing = "=1.18.1"
+image = { version = "0.25", default-features = false, features = ["png"] }

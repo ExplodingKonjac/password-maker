@@ -2,8 +2,8 @@ use std::convert::TryInto;
 
 use argon2::{Algorithm, Argon2, Params, Version};
 use chacha20poly1305::{
-    aead::{Aead, KeyInit, Payload},
     Key, XChaCha20Poly1305, XNonce,
+    aead::{Aead, KeyInit, Payload},
 };
 use getrandom::fill as fill_random;
 use postcard::{from_bytes, to_allocvec};
@@ -66,7 +66,8 @@ pub fn seal(password: &str, payload: &VaultPayload) -> Result<Vec<u8>, VaultCryp
     let header = encode_header(&salt, &nonce);
     let key = derive_key(password.as_bytes(), &salt)?;
     let cipher = XChaCha20Poly1305::new(Key::from_slice(key.as_ref()));
-    let plaintext = to_allocvec(payload).map_err(|_| VaultCryptoError::Serialization)?;
+    let plaintext =
+        Zeroizing::new(to_allocvec(payload).map_err(|_| VaultCryptoError::Serialization)?);
     let ciphertext = cipher
         .encrypt(
             XNonce::from_slice(&nonce),
@@ -107,24 +108,22 @@ pub fn open(password: &str, envelope: &[u8]) -> Result<VaultPayload, VaultCrypto
 
     let salt: [u8; SALT_LEN] = header[19..35].try_into().unwrap();
     let nonce: [u8; NONCE_LEN] = header[35..59].try_into().unwrap();
-    let key = derive_key_with_parameters(
-        password.as_bytes(),
-        &salt,
-        memory,
-        iterations,
-        parallelism,
-    )?;
+    let key =
+        derive_key_with_parameters(password.as_bytes(), &salt, memory, iterations, parallelism)?;
     let cipher = XChaCha20Poly1305::new(Key::from_slice(key.as_ref()));
-    let plaintext = cipher
-        .decrypt(
-            XNonce::from_slice(&nonce),
-            Payload {
-                msg: &envelope[HEADER_LEN..],
-                aad: header,
-            },
-        )
-        .map_err(|_| VaultCryptoError::AuthenticationFailed)?;
-    let payload: VaultPayload = from_bytes(&plaintext).map_err(|_| VaultCryptoError::Serialization)?;
+    let plaintext = Zeroizing::new(
+        cipher
+            .decrypt(
+                XNonce::from_slice(&nonce),
+                Payload {
+                    msg: &envelope[HEADER_LEN..],
+                    aad: header,
+                },
+            )
+            .map_err(|_| VaultCryptoError::AuthenticationFailed)?,
+    );
+    let payload: VaultPayload =
+        from_bytes(&plaintext).map_err(|_| VaultCryptoError::Serialization)?;
     if payload.schema_version != VaultPayload::CURRENT_SCHEMA_VERSION {
         return Err(VaultCryptoError::UnsupportedSchema);
     }
@@ -144,7 +143,10 @@ fn encode_header(salt: &[u8; SALT_LEN], nonce: &[u8; NONCE_LEN]) -> Vec<u8> {
     header
 }
 
-fn derive_key(password: &[u8], salt: &[u8; SALT_LEN]) -> Result<Zeroizing<[u8; 32]>, VaultCryptoError> {
+fn derive_key(
+    password: &[u8],
+    salt: &[u8; SALT_LEN],
+) -> Result<Zeroizing<[u8; 32]>, VaultCryptoError> {
     derive_key_with_parameters(
         password,
         salt,
@@ -172,7 +174,11 @@ fn derive_key_with_parameters(
     Ok(key)
 }
 
-fn validate_kdf_parameters(memory: u32, iterations: u32, parallelism: u32) -> Result<(), VaultCryptoError> {
+fn validate_kdf_parameters(
+    memory: u32,
+    iterations: u32,
+    parallelism: u32,
+) -> Result<(), VaultCryptoError> {
     if !(32 * 1024..=512 * 1024).contains(&memory)
         || !(1..=10).contains(&iterations)
         || !(1..=16).contains(&parallelism)
