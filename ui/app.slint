@@ -138,43 +138,49 @@ component GeneratorPanel inherits Rectangle {
                     accessible-label: "Keyword string";
                     enabled: !root.busy;
                 }
-                HorizontalLayout {
-                    spacing: 12px;
-                    Text {
-                        text: "Length";
-                        vertical-alignment: center;
-                        color: #526071;
+                VerticalLayout {
+                    spacing: 10px;
+                    HorizontalLayout {
+                        spacing: 12px;
+                        Text {
+                            text: "Length";
+                            vertical-alignment: center;
+                            color: #526071;
+                        }
+                        SpinBox {
+                            value <=> root.password-length;
+                            minimum: 8;
+                            maximum: 128;
+                            accessible-label: "Password length";
+                            enabled: !root.busy;
+                        }
                     }
-                    SpinBox {
-                        value <=> root.password-length;
-                        minimum: 8;
-                        maximum: 128;
-                        accessible-label: "Password length";
-                        enabled: !root.busy;
-                    }
-                    CheckBox {
-                        text: "Lowercase";
-                        checked <=> root.include-lowercase;
-                        accessible-label: "Include lowercase letters";
-                        enabled: !root.busy;
-                    }
-                    CheckBox {
-                        text: "Uppercase";
-                        checked <=> root.include-uppercase;
-                        accessible-label: "Include uppercase letters";
-                        enabled: !root.busy;
-                    }
-                    CheckBox {
-                        text: "Numbers";
-                        checked <=> root.include-numbers;
-                        accessible-label: "Include numbers";
-                        enabled: !root.busy;
-                    }
-                    CheckBox {
-                        text: "Symbols";
-                        checked <=> root.include-symbols;
-                        accessible-label: "Include symbols";
-                        enabled: !root.busy;
+                    HorizontalLayout {
+                        spacing: 12px;
+                        CheckBox {
+                            text: "Lowercase";
+                            checked <=> root.include-lowercase;
+                            accessible-label: "Include lowercase letters";
+                            enabled: !root.busy;
+                        }
+                        CheckBox {
+                            text: "Uppercase";
+                            checked <=> root.include-uppercase;
+                            accessible-label: "Include uppercase letters";
+                            enabled: !root.busy;
+                        }
+                        CheckBox {
+                            text: "Numbers";
+                            checked <=> root.include-numbers;
+                            accessible-label: "Include numbers";
+                            enabled: !root.busy;
+                        }
+                        CheckBox {
+                            text: "Symbols";
+                            checked <=> root.include-symbols;
+                            accessible-label: "Include symbols";
+                            enabled: !root.busy;
+                        }
                     }
                 }
                 Button {
@@ -316,6 +322,7 @@ component VaultPanel inherits Rectangle {
                             text: entry.label;
                             color: #1c2430;
                             vertical-alignment: center;
+                            horizontal-stretch: 1;
                         }
                         Text {
                             text: entry.updated;
@@ -389,35 +396,48 @@ component SettingsPanel inherits Rectangle {
                 HorizontalLayout {
                     spacing: 16px;
                     Text {
-                        text: "Auto-lock option (0=1m, 1=5m, 2=15m, 3=30m, 4=Never)";
+                        text: "Auto-lock timeout";
                         vertical-alignment: center;
                         color: #526071;
                         horizontal-stretch: 1;
+                    }
+                    Text {
+                        text: root.timeout-index == 0 ? "1 minute" : root.timeout-index == 1 ? "5 minutes" : root.timeout-index == 3 ? "30 minutes" : root.timeout-index == 4 ? "Never" : "15 minutes";
+                        vertical-alignment: center;
+                        color: #526071;
                     }
                     SpinBox {
                         value <=> root.timeout-index;
                         minimum: 0;
                         maximum: 4;
-                        accessible-label: "Auto-lock option";
+                        accessible-label: "Auto-lock timeout selection";
+                        enabled: !root.busy;
                     }
                 }
                 HorizontalLayout {
                     spacing: 16px;
                     Text {
-                        text: "Theme (0=System, 1=Light, 2=Dark)";
+                        text: "Theme";
                         vertical-alignment: center;
                         color: #526071;
                         horizontal-stretch: 1;
+                    }
+                    Text {
+                        text: root.theme-index == 1 ? "Light" : root.theme-index == 2 ? "Dark" : "System";
+                        vertical-alignment: center;
+                        color: #526071;
                     }
                     SpinBox {
                         value <=> root.theme-index;
                         minimum: 0;
                         maximum: 2;
-                        accessible-label: "Theme option";
+                        accessible-label: "Theme selection";
+                        enabled: !root.busy;
                     }
                 }
                 Button {
                     text: "Save settings";
+                    enabled: !root.busy;
                     clicked => {
                         root.save-settings();
                     }
@@ -446,12 +466,14 @@ component SettingsPanel inherits Rectangle {
                     input-type: password;
                     placeholder-text: "Backup password";
                     accessible-label: "Backup password";
+                    enabled: !root.busy;
                 }
                 LineEdit {
                     text <=> root.restore-path;
                     placeholder-text: "Choose a backup file";
                     accessible-label: "Backup file";
                     read-only: true;
+                    enabled: !root.busy;
                 }
                 HorizontalLayout {
                     spacing: 12px;
@@ -497,18 +519,21 @@ component SettingsPanel inherits Rectangle {
                     input-type: password;
                     placeholder-text: "Current password";
                     accessible-label: "Current hyper password";
+                    enabled: !root.busy;
                 }
                 LineEdit {
                     text <=> root.new-password;
                     input-type: password;
                     placeholder-text: "New password";
                     accessible-label: "New hyper password";
+                    enabled: !root.busy;
                 }
                 LineEdit {
                     text <=> root.confirm-password;
                     input-type: password;
                     placeholder-text: "Confirm new password";
                     accessible-label: "Confirm new hyper password";
+                    enabled: !root.busy;
                 }
                 Button {
                     text: "Change password";
@@ -523,13 +548,16 @@ component SettingsPanel inherits Rectangle {
 component NavItem inherits Rectangle {
     in property <string> label;
     in property <bool> active;
+    in property <bool> enabled: true;
     callback clicked;
     height: 42px;
     background: root.active ? #e0e7ff : transparent;
     border-radius: 8px;
     accessible-role: button;
     accessible-label: root.label;
+    opacity: root.enabled ? 1 : 0.5;
     TouchArea {
+        enabled: root.enabled;
         clicked => { root.clicked(); }
     }
     Text {
@@ -543,6 +571,7 @@ component NavItem inherits Rectangle {
 
 component NavigationRail inherits Rectangle {
     in-out property <string> current-page;
+    in property <bool> busy;
     callback navigate(destination: string);
     callback lock;
     width: 190px;
@@ -568,16 +597,19 @@ component NavigationRail inherits Rectangle {
         NavItem {
             label: "Generate";
             active: root.current-page == "generator";
+            enabled: !root.busy;
             clicked => { root.navigate("generator"); }
         }
         NavItem {
             label: "Vault";
             active: root.current-page == "vault";
+            enabled: !root.busy;
             clicked => { root.navigate("vault"); }
         }
         NavItem {
             label: "Settings";
             active: root.current-page == "settings";
+            enabled: !root.busy;
             clicked => { root.navigate("settings"); }
         }
         Rectangle {
@@ -588,6 +620,7 @@ component NavigationRail inherits Rectangle {
             accessible-label: "Lock vault";
             width: 150px;
             height: 42px;
+            enabled: !root.busy;
             clicked => {
                 root.lock();
             }
@@ -635,6 +668,7 @@ component MainShell inherits Rectangle {
     HorizontalLayout {
         NavigationRail {
             current-page <=> root.page;
+            busy <=> root.busy;
             navigate(destination) => {
                 root.navigate(destination);
             }
