@@ -3529,6 +3529,7 @@ dependencies = [
  "serde",
  "slint",
  "slint-build",
+ "tempfile",
  "thiserror 2.0.21",
  "unicode-normalization",
  "uuid",

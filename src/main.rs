@@ -1,6 +1,7 @@
 mod crypto;
 mod generator;
 mod model;
+mod storage;
 
 slint::include_modules!();
 
