@@ -407,6 +407,9 @@ component SettingsPanel inherits Rectangle {
                         color: #526071;
                         width: 180px;
                     }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                    }
                     ComboBox {
                         model: ["1 minute", "5 minutes", "15 minutes", "30 minutes", "Never"];
                         current-index <=> root.timeout-index;
@@ -422,6 +425,9 @@ component SettingsPanel inherits Rectangle {
                         vertical-alignment: center;
                         color: #526071;
                         width: 180px;
+                    }
+                    Rectangle {
+                        horizontal-stretch: 1;
                     }
                     ComboBox {
                         model: ["System", "Light", "Dark"];
@@ -547,22 +553,27 @@ component NavItem inherits Rectangle {
     in property <bool> enabled: true;
     callback clicked;
     height: 42px;
-    background: root.active ? #e0e7ff : transparent;
+    background: touch-area.pressed
+        ? #c7d2fe
+        : root.active
+            ? #e0e7ff
+            : touch-area.has-hover ? #f1f5ff : transparent;
     border-radius: 8px;
     accessible-role: button;
     accessible-label: root.label;
     opacity: root.enabled ? 1 : 0.5;
-    TouchArea {
+    touch-area := TouchArea {
         enabled: root.enabled;
         clicked => { root.clicked(); }
     }
     Text {
         text: root.label;
-        color: root.active ? #3730a3 : #526071;
+        color: root.active || touch-area.has-hover ? #3730a3 : #526071;
         font-weight: root.active ? 600 : 500;
         vertical-alignment: center;
         x: 14px;
     }
+    animate background, opacity { duration: 140ms; easing: ease-out; }
 }
 
 component NavigationRail inherits Rectangle {
@@ -577,11 +588,12 @@ component NavigationRail inherits Rectangle {
     VerticalLayout {
         padding: 24px;
         spacing: 10px;
-        Text {
-            text: "PM";
-            font-size: 24px;
-            font-weight: 700;
-            color: #4f46e5;
+        Image {
+            source: @image-url("assets/password-maker-icon.png");
+            width: 40px;
+            height: 40px;
+            accessible-role: image;
+            accessible-label: "Password Maker icon";
         }
         Text {
             text: "Password Maker";
@@ -674,94 +686,111 @@ component MainShell inherits Rectangle {
         }
         Rectangle {
             background: #f7f8fa;
-            ScrollView {
-                VerticalLayout {
-                    alignment: start;
-                    padding: 36px;
-                    spacing: 20px;
+            VerticalLayout {
+                ScrollView {
+                    vertical-stretch: 1;
+                    opacity: root.busy ? 0.82 : 1;
+                    animate opacity { duration: 160ms; easing: ease-out; }
+                    VerticalLayout {
+                        alignment: start;
+                        padding: 36px;
+                        spacing: 20px;
+                        HorizontalLayout {
+                            spacing: 16px;
+                            Text {
+                                text: root.page == "generator" ? "Generate" : root.page == "vault" ? "Vault" : "Settings";
+                                font-size: 30px;
+                                font-weight: 700;
+                                color: #1c2430;
+                            }
+                        }
+                        if root.page == "generator": GeneratorPanel {
+                            keyword <=> root.keyword;
+                            password-length <=> root.password-length;
+                            include-lowercase <=> root.include-lowercase;
+                            include-uppercase <=> root.include-uppercase;
+                            include-numbers <=> root.include-numbers;
+                            include-symbols <=> root.include-symbols;
+                            password-value <=> root.password-value;
+                            password-revealed <=> root.password-revealed;
+                            busy <=> root.busy;
+                            generate => {
+                                root.generate();
+                            }
+                            copy => {
+                                root.copy();
+                            }
+                        }
+                        if root.page == "vault": VaultPanel {
+                            entries <=> root.entries;
+                            search <=> root.search;
+                            entry-label <=> root.entry-label;
+                            editor-id <=> root.editor-id;
+                            keyword <=> root.keyword;
+                            password-length <=> root.password-length;
+                            include-lowercase <=> root.include-lowercase;
+                            include-uppercase <=> root.include-uppercase;
+                            include-numbers <=> root.include-numbers;
+                            include-symbols <=> root.include-symbols;
+                            search-changed => {
+                                root.search-changed();
+                            }
+                            save-entry => {
+                                root.save-entry();
+                            }
+                            copy-entry(id) => {
+                                root.copy-entry(id);
+                            }
+                            edit-entry(id) => {
+                                root.edit-entry(id);
+                            }
+                            delete-entry(id) => {
+                                root.delete-entry(id);
+                            }
+                        }
+                        if root.page == "settings": SettingsPanel {
+                            status <=> root.status;
+                            busy <=> root.busy;
+                            timeout-index <=> root.timeout-index;
+                            theme-index <=> root.theme-index;
+                            backup-password <=> root.backup-password;
+                            restore-path <=> root.restore-path;
+                            new-password <=> root.new-password;
+                            confirm-password <=> root.confirm-password;
+                            current-password <=> root.current-password;
+                            save-settings => {
+                                root.save-settings();
+                            }
+                            export-vault => {
+                                root.export-vault();
+                            }
+                            choose-backup => {
+                                root.choose-backup();
+                            }
+                            restore-vault => {
+                                root.restore-vault();
+                            }
+                            change-password(current,next,confirmation) => {
+                                root.change-password(current,next,confirmation);
+                            }
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 34px;
+                    background: #eef1f5;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    border-color: #dbe2ea;
+                    opacity: root.status.is-empty ? 0.45 : 1;
+                    animate opacity { duration: 180ms; easing: ease-out; }
                     HorizontalLayout {
-                        spacing: 16px;
+                        padding: 8px;
                         Text {
-                            text: root.page == "generator" ? "Generate" : root.page == "vault" ? "Vault" : "Settings";
-                            font-size: 30px;
-                            font-weight: 700;
-                            color: #1c2430;
+                            text: root.status.is-empty ? "Ready" : root.status;
+                            color: #526071;
+                            accessible-live-region: polite;
                         }
-                    }
-                    if root.page == "generator": GeneratorPanel {
-                        keyword <=> root.keyword;
-                        password-length <=> root.password-length;
-                        include-lowercase <=> root.include-lowercase;
-                        include-uppercase <=> root.include-uppercase;
-                        include-numbers <=> root.include-numbers;
-                        include-symbols <=> root.include-symbols;
-                        password-value <=> root.password-value;
-                        password-revealed <=> root.password-revealed;
-                        busy <=> root.busy;
-                        generate => {
-                            root.generate();
-                        }
-                        copy => {
-                            root.copy();
-                        }
-                    }
-                    if root.page == "vault": VaultPanel {
-                        entries <=> root.entries;
-                        search <=> root.search;
-                        entry-label <=> root.entry-label;
-                        editor-id <=> root.editor-id;
-                        keyword <=> root.keyword;
-                        password-length <=> root.password-length;
-                        include-lowercase <=> root.include-lowercase;
-                        include-uppercase <=> root.include-uppercase;
-                        include-numbers <=> root.include-numbers;
-                        include-symbols <=> root.include-symbols;
-                        search-changed => {
-                            root.search-changed();
-                        }
-                        save-entry => {
-                            root.save-entry();
-                        }
-                        copy-entry(id) => {
-                            root.copy-entry(id);
-                        }
-                        edit-entry(id) => {
-                            root.edit-entry(id);
-                        }
-                        delete-entry(id) => {
-                            root.delete-entry(id);
-                        }
-                    }
-                    if root.page == "settings": SettingsPanel {
-                        status <=> root.status;
-                        busy <=> root.busy;
-                        timeout-index <=> root.timeout-index;
-                        theme-index <=> root.theme-index;
-                        backup-password <=> root.backup-password;
-                        restore-path <=> root.restore-path;
-                        new-password <=> root.new-password;
-                        confirm-password <=> root.confirm-password;
-                        current-password <=> root.current-password;
-                        save-settings => {
-                            root.save-settings();
-                        }
-                        export-vault => {
-                            root.export-vault();
-                        }
-                        choose-backup => {
-                            root.choose-backup();
-                        }
-                        restore-vault => {
-                            root.restore-vault();
-                        }
-                        change-password(current,next,confirmation) => {
-                            root.change-password(current,next,confirmation);
-                        }
-                    }
-                    Text {
-                        text: root.status;
-                        color: #526071;
-                        accessible-live-region: polite;
                     }
                 }
             }
