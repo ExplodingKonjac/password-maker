@@ -405,13 +405,14 @@ component SettingsPanel inherits Rectangle {
                         text: "Auto-lock timeout";
                         vertical-alignment: center;
                         color: #526071;
-                        horizontal-stretch: 1;
+                        width: 180px;
                     }
                     ComboBox {
                         model: ["1 minute", "5 minutes", "15 minutes", "30 minutes", "Never"];
                         current-index <=> root.timeout-index;
                         accessible-label: "Auto-lock timeout selection";
                         enabled: !root.busy;
+                        width: 240px;
                     }
                 }
                 HorizontalLayout {
@@ -420,13 +421,14 @@ component SettingsPanel inherits Rectangle {
                         text: "Theme";
                         vertical-alignment: center;
                         color: #526071;
-                        horizontal-stretch: 1;
+                        width: 180px;
                     }
                     ComboBox {
                         model: ["System", "Light", "Dark"];
                         current-index <=> root.theme-index;
                         accessible-label: "Theme selection";
                         enabled: !root.busy;
+                        width: 240px;
                     }
                 }
                 Button {
@@ -674,6 +676,7 @@ component MainShell inherits Rectangle {
             background: #f7f8fa;
             ScrollView {
                 VerticalLayout {
+                    alignment: start;
                     padding: 36px;
                     spacing: 20px;
                     HorizontalLayout {

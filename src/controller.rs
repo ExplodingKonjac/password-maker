@@ -71,7 +71,7 @@ fn execute(service: &mut VaultService, job: Job) -> Result<Outcome, String> {
             }
             Job::Unlock(password) => {
                 service.unlock(password)?;
-                "Vault unlocked."
+                ""
             }
             Job::Generate(keyword, options) => {
                 return Ok(Outcome::Password(

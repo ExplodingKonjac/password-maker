@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for page in ["generator", "vault", "settings"] {
             let window = AppWindow::new()?;
             window.set_page(page.into());
-            window.set_status("Vault unlocked.".into());
+            window.set_status("".into());
             window.set_keyword("personal-email".into());
             window.set_entry_label("Personal email".into());
             window.set_entries(ModelRc::new(VecModel::from(vec![
