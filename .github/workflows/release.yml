@@ -1,0 +1,88 @@
+name: Release binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  tag_on_main:
+    name: Check tagged commit is on main
+    runs-on: ubuntu-latest
+    outputs:
+      on_main: ${{ steps.check.outputs.on_main }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify tag is reachable from main
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "on_main=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "on_main=false" >> "$GITHUB_OUTPUT"
+            echo "Tag $GITHUB_REF_NAME does not point to a commit on main."
+          fi
+
+  build:
+    name: Build (${{ matrix.platform }})
+    needs: tag_on_main
+    if: needs.tag_on_main.outputs.on_main == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x86_64
+            binary: target/release/password-maker
+            asset: password-maker-linux-x86_64
+          - os: macos-latest
+            platform: macos
+            binary: target/release/password-maker
+            asset: password-maker-macos
+          - os: windows-latest
+            platform: windows-x86_64
+            binary: target/release/password-maker.exe
+            asset: password-maker-windows-x86_64.exe
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Linux UI dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libxkbcommon-dev libwayland-dev libx11-xcb-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.94.0
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Stage release binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp "${{ matrix.binary }}" "dist/${{ matrix.asset }}"
+
+      - name: Upload release binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}-${{ github.ref_name }}
+          path: dist/${{ matrix.asset }}
+          if-no-files-found: error
