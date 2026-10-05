@@ -63,7 +63,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libxkbcommon-dev libwayland-dev libx11-xcb-dev
+          sudo apt-get install --yes libfontconfig1-dev libxkbcommon-dev libwayland-dev libx11-xcb-dev
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
